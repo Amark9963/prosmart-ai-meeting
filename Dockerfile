@@ -16,14 +16,11 @@ RUN uv sync --locked --no-dev --no-editable
 
 # Stage 2: Runtime image
 FROM python:3.12-slim
-
 ENV PYTHONUNBUFFERED=1 \
     JOINLY_SERVER_HOST="0.0.0.0" \
     JOINLY_SERVER_PORT=8000 \
     JOINLY_LOGGING_PLAIN=1
-
 EXPOSE 8000
-
 # Install system dependencies (for audio, video, browser, etc.)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libnss3 \
@@ -44,25 +41,20 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     x11vnc \
     && apt-get purge -y --auto-remove \
     && rm -rf /var/lib/apt/lists/* /tmp/*
-
 # Create non-root user
 RUN groupadd --gid 1001 app && \
     useradd --uid 1001 --gid 1001 -m app
-
 # Copy virtual environment from builder and set permissions
 COPY --from=builder --chown=app:app /app/.venv /app/.venv
-
+# Copy download assets script
+COPY scripts/download_assets.py /app/download_assets.py
 # Set user and working directory
 USER app
 WORKDIR /app
-
 # Run download assets script to package all required assets
-# Note: this makes the image size very large, but has all assets on startup
-RUN --mount=type=bind,source=scripts/download_assets.py,target=download_assets.py \
-    PATH="/app/.venv/bin:${PATH}" \
+RUN PATH="/app/.venv/bin:${PATH}" \
     /app/.venv/bin/python download_assets.py \
     --assets playwright whisper silero kokoro \
     --whisper-model base
-
 # Set entrypoint
 ENTRYPOINT ["/app/.venv/bin/joinly"]
