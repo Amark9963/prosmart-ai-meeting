@@ -10,10 +10,13 @@ COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 WORKDIR /app
 
 # Install dependencies using uv and lock files
-RUN --mount=type=cache,target=/root/.cache/uv \
+RUN --mount=type=cache,id=uv-cache,target=/root/.cache/uv \
     --mount=type=bind,source=uv.lock,target=uv.lock \
     --mount=type=bind,source=pyproject.toml,target=pyproject.toml \
     uv sync --locked --no-install-project --no-dev --no-editable
+
+RUN --mount=type=cache,id=uv-cache,target=/root/.cache/uv \
+    uv sync --locked --no-dev --no-editable
 
 # Copy app source code
 COPY . /app
